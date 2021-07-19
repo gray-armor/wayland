@@ -75,6 +75,13 @@ struct wl_shm_buffer {
 	struct wl_shm_pool *pool;
 };
 
+struct wl_shm_raw_buffer {
+	struct wl_resource *resource;
+	int32_t size;
+	int offset;
+	struct wl_shm_pool *pool;
+};
+
 struct wl_shm_sigbus_data {
 	struct wl_shm_pool *current_pool;
 	int access_count;
@@ -131,13 +138,32 @@ destroy_buffer(struct wl_resource *resource)
 }
 
 static void
+destroy_raw_buffer(struct wl_resource *resource)
+{
+	struct wl_shm_raw_buffer * buffer = wl_resource_get_user_data(resource);
+
+	shm_pool_unref(buffer->pool, false);
+	free(buffer);
+}
+
+static void
 shm_buffer_destroy(struct wl_client *client, struct wl_resource *resource)
+{
+	wl_resource_destroy(resource);
+}
+
+static void
+shm_raw_buffer_destroy(struct wl_client *client, struct wl_resource *resource)
 {
 	wl_resource_destroy(resource);
 }
 
 static const struct wl_buffer_interface shm_buffer_interface = {
 	shm_buffer_destroy
+};
+
+static const struct wl_raw_buffer_interface shm_raw_buffer_interface = {
+	shm_raw_buffer_destroy
 };
 
 static bool
@@ -216,6 +242,45 @@ shm_pool_create_buffer(struct wl_client *client, struct wl_resource *resource,
 }
 
 static void
+shm_pool_create_raw_buffer(struct wl_client *client, struct wl_resource *resource,
+		           uint32_t id, int32_t offset, int32_t size)
+{
+	struct wl_shm_pool *pool = wl_resource_get_user_data(resource);
+	struct wl_shm_raw_buffer *buffer;
+
+	if (offset < 0 || offset > pool->size - size) {
+		wl_resource_post_error(resource,
+				       WL_SHM_ERROR_INVALID_SIZE,
+				       "invalid buffer size or offset (size: %d)",
+				       size);
+		return;
+	}
+
+	buffer = malloc(sizeof *buffer);
+	if (buffer == NULL) {
+		wl_client_post_no_memory(client);
+		return;
+	}
+
+	buffer->size = size;
+	buffer->offset = offset;
+	buffer->pool = pool;
+	pool->internal_refcount++;
+
+	buffer->resource = wl_resource_create(client, &wl_raw_buffer_interface, 1, id);
+	if (buffer->resource == NULL) {
+		wl_client_post_no_memory(client);
+		shm_pool_unref(pool, false);
+		free(buffer);
+		return;
+	}
+
+	wl_resource_set_implementation(buffer->resource,
+				       &shm_raw_buffer_interface,
+				       buffer, destroy_raw_buffer);
+}
+
+static void
 destroy_pool(struct wl_resource *resource)
 {
 	struct wl_shm_pool *pool = wl_resource_get_user_data(resource);
@@ -255,6 +320,7 @@ shm_pool_resize(struct wl_client *client, struct wl_resource *resource,
 
 static const struct wl_shm_pool_interface shm_pool_interface = {
 	shm_pool_create_buffer,
+	shm_pool_create_raw_buffer,
 	shm_pool_destroy,
 	shm_pool_resize
 };
@@ -427,6 +493,25 @@ wl_shm_buffer_get_height(struct wl_shm_buffer *buffer)
 	return buffer->height;
 }
 
+WL_EXPORT struct wl_shm_buffer *
+wl_shm_raw_buffer_get(struct wl_resource *resource)
+{
+	if (resource == NULL)
+		return NULL;
+	
+	if (wl_resource_instance_of(resource, &wl_raw_buffer_interface,
+				    &shm_raw_buffer_interface))
+		return wl_resource_get_user_data(resource);
+	else
+		return NULL;
+}
+
+WL_EXPORT int32_t
+wl_shm_buffer_get_size(struct wl_shm_raw_buffer *buffer)
+{
+	return buffer->size;
+}
+
 /** Get a reference to a shm_buffer's shm_pool
  *
  * \param buffer The buffer object
@@ -443,6 +528,30 @@ wl_shm_buffer_get_height(struct wl_shm_buffer *buffer)
  */
 WL_EXPORT struct wl_shm_pool *
 wl_shm_buffer_ref_pool(struct wl_shm_buffer *buffer)
+{
+	assert(buffer->pool->internal_refcount +
+	       buffer->pool->external_refcount);
+
+	buffer->pool->external_refcount++;
+	return buffer->pool;
+}
+
+/** Get a reference to a shm_buffer's shm_pool
+ *
+ * \param buffer The buffer object
+ *
+ * Returns a pointer to a buffer's shm_pool and increases the
+ * shm_pool refcount.
+ *
+ * The compositor must remember to call wl_shm_pool_unref when
+ * it no longer needs the reference to ensure proper destruction
+ * of the pool.
+ *
+ * \memberof wl_shm_raw_buffer
+ * \sa wl_shm_pool_unref
+ */
+WL_EXPORT struct wl_shm_pool *
+wl_shm_raw_buffer_ref_pool(struct wl_shm_raw_buffer *buffer)
 {
 	assert(buffer->pool->internal_refcount +
 	       buffer->pool->external_refcount);

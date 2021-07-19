@@ -242,6 +242,13 @@
       <arg name="format" type="uint" enum="wl_shm.format" summary="buffer pixel format"/>
     </request>
 
+    <request name="create_raw_buffer">
+      <description summary="create a raw buffer from the pool">TBD</description>
+      <arg name="id" type="new_id" interface="wl_raw_buffer" summary="raw buffer to create"/>
+      <arg name="offset" type="int" summary="buffer byte offset within the pool"/>
+      <arg name="size" type="int" summary="buffer size, in bytes"/>
+    </request>
+
     <request name="destroy" type="destructor">
       <description summary="destroy the pool">
 	Destroy the shared memory pool.
@@ -283,6 +290,7 @@
       <entry name="invalid_format" value="0" summary="buffer format is not known"/>
       <entry name="invalid_stride" value="1" summary="invalid size or stride during pool or buffer creation"/>
       <entry name="invalid_fd" value="2" summary="mmapping the file descriptor failed"/>
+      <entry name="invalid_size" value="3" summary="invalid size of offset"/>
     </enum>
 
     <enum name="format">
@@ -425,6 +433,21 @@
 	argb8888 and xrgb8888.
       </description>
       <arg name="format" type="uint" enum="format" summary="buffer pixel format"/>
+    </event>
+  </interface>
+
+  <interface name="wl_raw_buffer" version="1">
+    <description summary="buffer for general use">TBD</description>
+    <request name="destroy" type="destructor">
+      <description summary="destroy a raw buffer">
+	Destroy a raw buffer. If and how you need to release the backing
+	storage is defined by the buffer factory interface.
+
+	For possible side-effects to a surface, see wl_surface.attach.
+      </description>
+    </request>
+    <event name="release">
+      <description summary="compositor releases a raw buffer">TBD</description>
     </event>
   </interface>
 
