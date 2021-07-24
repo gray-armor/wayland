@@ -493,7 +493,7 @@ wl_shm_buffer_get_height(struct wl_shm_buffer *buffer)
 	return buffer->height;
 }
 
-WL_EXPORT struct wl_shm_buffer *
+WL_EXPORT struct wl_shm_raw_buffer *
 wl_shm_raw_buffer_get(struct wl_resource *resource)
 {
 	if (resource == NULL)
@@ -507,9 +507,20 @@ wl_shm_raw_buffer_get(struct wl_resource *resource)
 }
 
 WL_EXPORT int32_t
-wl_shm_buffer_get_size(struct wl_shm_raw_buffer *buffer)
+wl_shm_raw_buffer_get_size(struct wl_shm_raw_buffer *buffer)
 {
 	return buffer->size;
+}
+
+WL_EXPORT void *
+wl_shm_raw_buffer_get_data(struct wl_shm_raw_buffer *buffer)
+{
+	if (buffer->pool->external_refcount &&
+	    (buffer->pool->size != buffer->pool->new_size))
+		wl_log("Buffer address requested when its parent pool "
+		       "has an external reference and a deferred resize "
+		       "pending.\n");
+	return buffer->pool->data + buffer->offset;
 }
 
 /** Get a reference to a shm_buffer's shm_pool
