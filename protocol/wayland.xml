@@ -242,13 +242,6 @@
       <arg name="format" type="uint" enum="wl_shm.format" summary="buffer pixel format"/>
     </request>
 
-    <request name="create_raw_buffer">
-      <description summary="create a raw buffer from the pool">TBD</description>
-      <arg name="id" type="new_id" interface="wl_raw_buffer" summary="raw buffer to create"/>
-      <arg name="offset" type="int" summary="buffer byte offset within the pool"/>
-      <arg name="size" type="int" summary="buffer size, in bytes"/>
-    </request>
-
     <request name="destroy" type="destructor">
       <description summary="destroy the pool">
 	Destroy the shared memory pool.
@@ -267,6 +260,13 @@
 	used to make the pool bigger.
       </description>
       <arg name="size" type="int" summary="new size of the pool, in bytes"/>
+    </request>
+
+    <request name="create_raw_buffer">
+      <description summary="create a raw buffer from the pool">TBD</description>
+      <arg name="id" type="new_id" interface="wl_raw_buffer" summary="raw buffer to create"/>
+      <arg name="offset" type="int" summary="buffer byte offset within the pool"/>
+      <arg name="size" type="int" summary="buffer size, in bytes"/>
     </request>
   </interface>
 

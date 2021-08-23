@@ -320,9 +320,9 @@ shm_pool_resize(struct wl_client *client, struct wl_resource *resource,
 
 static const struct wl_shm_pool_interface shm_pool_interface = {
 	shm_pool_create_buffer,
-	shm_pool_create_raw_buffer,
 	shm_pool_destroy,
-	shm_pool_resize
+	shm_pool_resize,
+	shm_pool_create_raw_buffer
 };
 
 static void
